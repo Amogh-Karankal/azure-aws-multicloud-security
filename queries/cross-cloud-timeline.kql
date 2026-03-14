@@ -1,0 +1,15 @@
+// Query: Cross-Cloud Activity Timeline
+// Purpose: Unified view of authentication events across Azure and AWS
+// Use Case: Investigate user activity across both clouds
+
+union
+    (SigninLogs 
+    | where TimeGenerated > ago(24h) 
+    | where ResultType == 0
+    | extend Country = tostring(LocationDetails.countryOrRegion)
+    | project TimeGenerated, Cloud="Azure", Event="SignIn", User=UserPrincipalName, IP=IPAddress, Location=Country),
+    (AWSCloudTrail 
+    | where TimeGenerated > ago(24h)
+    | where EventName in ("AssumeRoleWithSAML", "AssumeRole")
+    | project TimeGenerated, Cloud="AWS", Event=EventName, User=UserIdentityArn, IP=SourceIpAddress, Location=AWSRegion)
+| order by TimeGenerated desc

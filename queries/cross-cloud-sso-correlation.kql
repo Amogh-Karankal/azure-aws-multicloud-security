@@ -1,0 +1,21 @@
+// Query: Cross-Cloud SSO Correlation
+// Purpose: Correlate Azure login (by location) with subsequent AWS SSO access
+// Use Case: Track user journey from Azure authentication to AWS access
+
+let AzureLogins = SigninLogs
+| where TimeGenerated > ago(24h)
+| where ResultType == 0
+| extend Country = tostring(LocationDetails.countryOrRegion)
+| project AzureTime=TimeGenerated, User=UserPrincipalName, AzureIP=IPAddress, Country;
+let AWSLogins = AWSCloudTrail
+| where TimeGenerated > ago(24h)
+| where EventName in ("AssumeRoleWithSAML", "AssumeRole")
+| project AWSTime=TimeGenerated, EventName, UserIdentityArn, AWSIP=SourceIpAddress;
+AzureLogins
+| extend TimeBin = bin(AzureTime, 5m)
+| join kind=inner (
+    AWSLogins
+    | extend TimeBin = bin(AWSTime, 5m)
+) on TimeBin
+| project AzureTime, AWSTime, User, Country, AzureIP, EventName, AWSIP
+| order by AzureTime desc

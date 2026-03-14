@@ -1,0 +1,9 @@
+// Query: AWS SSO/Federated Logins
+// Purpose: Track SSO logins from Azure to AWS
+// Note: SSO logins appear as AssumeRole events, not ConsoleLogin
+
+AWSCloudTrail
+| where TimeGenerated > ago(24h)
+| where EventName in ("AssumeRole", "AssumeRoleWithSAML", "AssumeRoleWithWebIdentity")
+| project TimeGenerated, EventName, UserIdentityArn, SourceIpAddress, AWSRegion
+| order by TimeGenerated desc

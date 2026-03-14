@@ -1,0 +1,11 @@
+// Query: Azure Logins by Location
+// Purpose: Investigate user logins by geographic location
+// Use Case: Verify impossible travel, identify unusual login locations
+
+SigninLogs
+| where TimeGenerated > ago(24h)
+| where ResultType == 0
+| extend City = tostring(LocationDetails.city)
+| extend Country = tostring(LocationDetails.countryOrRegion)
+| project TimeGenerated, UserPrincipalName, IPAddress, City, Country
+| order by TimeGenerated desc
