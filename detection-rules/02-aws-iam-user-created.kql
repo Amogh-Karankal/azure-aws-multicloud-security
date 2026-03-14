@@ -1,0 +1,11 @@
+// Detection: AWS IAM User Created
+// MITRE ATT&CK: T1136 (Create Account)
+// Severity: Medium
+// Description: Detects creation of new IAM users in AWS
+// Schedule: Run every 15 minutes, lookup 24 hours
+
+AWSCloudTrail
+| where TimeGenerated > ago(24h)
+| where EventName == "CreateUser"
+| extend NewUser = tostring(parse_json(RequestParameters).userName)
+| project TimeGenerated, CreatedBy=UserIdentityArn, NewUser, SourceIpAddress

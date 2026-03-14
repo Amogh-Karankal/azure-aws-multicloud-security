@@ -1,0 +1,12 @@
+// Detection: AWS S3 Bucket Made Public
+// MITRE ATT&CK: T1530 (Data from Cloud Storage)
+// Severity: High
+// Description: Detects when S3 bucket ACL or policy is changed to allow public access
+// Schedule: Run every 15 minutes, lookup 24 hours
+
+AWSCloudTrail
+| where TimeGenerated > ago(24h)
+| where EventName in ("PutBucketAcl", "PutBucketPolicy")
+| where RequestParameters contains "public-read" or RequestParameters contains "AllUsers"
+| extend BucketName = tostring(parse_json(RequestParameters).bucketName)
+| project TimeGenerated, User=UserIdentityArn, EventName, BucketName, SourceIpAddress

@@ -1,0 +1,17 @@
+// Detection: Impossible Travel (Azure)
+// MITRE ATT&CK: T1078 (Valid Accounts)
+// Severity: Medium
+// Description: Detects users logging in from multiple countries within short timeframe
+// Schedule: Run every 30 minutes, lookup 24 hours
+
+SigninLogs
+| where TimeGenerated > ago(24h)
+| where ResultType == 0
+| extend Country = tostring(LocationDetails.countryOrRegion)
+| summarize 
+    Countries=make_set(Country), 
+    CountryCount=dcount(Country),
+    Logins=count()
+    by UserPrincipalName
+| where CountryCount > 1
+| project UserPrincipalName, CountryCount, Countries, Logins

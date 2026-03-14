@@ -1,0 +1,21 @@
+// Detection: Cross-Cloud Brute Force Attack
+// MITRE ATT&CK: T1110 (Brute Force)
+// Severity: High
+// Description: Detects same IP address attempting failed logins to both Azure and AWS
+// Schedule: Run every 5 minutes, lookup 1 hour
+
+let AzureFailedLogins = SigninLogs
+| where ResultType != 0
+| where TimeGenerated > ago(1h)
+| project TimeGenerated, Cloud="Azure", UserPrincipalName, IPAddress;
+let AWSFailedLogins = AWSCloudTrail
+| where EventName == "ConsoleLogin"
+| where TimeGenerated > ago(1h)
+| where ResponseElements contains "Failure"
+| project TimeGenerated, Cloud="AWS", UserPrincipalName=UserIdentityArn, IPAddress=SourceIpAddress;
+union AzureFailedLogins, AWSFailedLogins
+| summarize 
+    AzureAttempts = countif(Cloud == "Azure"),
+    AWSAttempts = countif(Cloud == "AWS")
+    by IPAddress
+| where AzureAttempts > 0 and AWSAttempts > 0

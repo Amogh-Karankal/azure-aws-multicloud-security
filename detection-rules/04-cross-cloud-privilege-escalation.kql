@@ -1,0 +1,18 @@
+// Detection: Cross-Cloud Privilege Escalation
+// MITRE ATT&CK: T1078 (Valid Accounts), T1098 (Account Manipulation)
+// Severity: High
+// Description: Detects AWS privileged actions following Azure admin role assignment
+// Schedule: Run every 1 hour, lookup 24 hours
+
+let AzureAdminAssignment = AuditLogs
+| where TimeGenerated > ago(24h)
+| where OperationName == "Add member to role"
+| extend User = tostring(InitiatedBy.user.userPrincipalName)
+| project AzureTime=TimeGenerated, User, Action="Admin Role Assigned";
+let AWSPrivilegedActions = AWSCloudTrail
+| where TimeGenerated > ago(24h)
+| where EventName in ("AttachUserPolicy", "CreateUser", "CreateAccessKey")
+| project AWSTime=TimeGenerated, User=UserIdentityArn, AWSAction=EventName;
+AzureAdminAssignment
+| join kind=inner (AWSPrivilegedActions) on User
+| where AWSTime > AzureTime and AWSTime < AzureTime + 24h
